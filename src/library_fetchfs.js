@@ -5,10 +5,19 @@
  */
 
 addToLibrary({
-  $FETCHFS__deps: ['$stringToUTF8OnStack', 'wasmfs_create_fetch_backend'],
+  $FETCHFS__deps: ['$stringToUTF8OnStack', 'wasmfs_create_fetch_backend', 'wasmfs_fetch_create_manifest', 'wasmfs_fetch_add_to_manifest'],
   $FETCHFS: {
     createBackend(opts) {
-      return _wasmfs_create_fetch_backend(stringToUTF8OnStack(opts.base_url), opts.chunkSize | 0, 0);
+      var manifest = 0;
+      if (opts['manifest']) {
+        manifest = wasmfs_fetch_create_manifest();
+        Object.entries(opts['manifest']).forEach((pair) => {
+          var path = stringToUTF8OnStack(pair[0]);
+          var url = stringToUTF8OnStack(pair[1]);
+          wasmfs_fetch_add_to_manifest(path, url);
+        })
+      }
+      return _wasmfs_create_fetch_backend(stringToUTF8OnStack(opts.base_url), opts.chunkSize | 0, manifest);
     }
   },
 });
