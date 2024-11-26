@@ -1953,10 +1953,10 @@ def harness_server_func(in_queue, out_queue, port):
         self.send_header('Content-Type', ctype)
         pieces = self.headers.get("Range").split("=")[1].split("-")
         start = int(pieces[0]) if pieces[0] != '' else 0
-        end = int(pieces[1]) if pieces[1] != '' else fs[6]-1
+        end = int(pieces[1]) if pieces[1] != '' else fs[6] - 1
         end = min(fs[6] - 1, end)
         length = end - start + 1
-        self.send_header('Content-Range', "bytes "+str(start)+"-"+str(end)+"/"+str(fs[6]));
+        self.send_header('Content-Range', "bytes " + str(start) + "-" + str(end) + "/" + str(fs[6]))
         self.send_header('Content-Length', str(length))
         self.end_headers()
         return f
@@ -2065,19 +2065,18 @@ def harness_server_func(in_queue, out_queue, port):
           path = self.translate_path(self.path)
           data = read_binary(path)
           ctype = self.guess_type(path)
-          self.send_header('Content-type', 'text/html')
+          self.send_header('Content-type', ctype)
           pieces = self.headers.get("range").split("=")[1].split("-")
           start = int(pieces[0]) if pieces[0] != '' else 0
-          end = int(pieces[1]) if pieces[1] != '' else len(data)-1
+          end = int(pieces[1]) if pieces[1] != '' else len(data) - 1
           end = min(len(data) - 1, end)
           length = end - start + 1
           self.send_header('Content-Length', str(length))
-          self.send_header('Content-Range', "bytes "+str(start)+"-"+str(end)+"/"+str(len(data)));
+          self.send_header('Content-Range', "bytes " + str(start) + "-" + str(end) + "/" + str(len(data)))
           self.end_headers()
           self.wfile.write(data[start:end + 1])
         else:
           SimpleHTTPRequestHandler.do_GET(self)
-
 
     def log_request(code=0, size=0):
       # don't log; too noisy
