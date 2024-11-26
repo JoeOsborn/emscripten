@@ -104,14 +104,14 @@ uint32_t FetchBackend::getChunkSize() {
 }
 
 extern "C" {
-  backend_t wasmfs_create_fetch_backend(const char* base_url /* TODO manifest */) {
+  backend_t wasmfs_create_fetch_backend(const char* base_url, uint32_t chunkSize /* TODO manifest */) {
   // ProxyWorker cannot safely be synchronously spawned from the main browser
   // thread. See comment in thread_utils.h for more details.
   assert(!emscripten_is_main_browser_thread() &&
          "Cannot safely create fetch backend on main browser thread");
   return wasmFS.addBackend(std::make_unique<FetchBackend>(
     base_url ? base_url : "",
-    DEFAULT_CHUNK_SIZE,
+    chunkSize != 0 ? chunkSize : DEFAULT_CHUNK_SIZE,
     /* TODO manifest */
     [](backend_t backend) { _wasmfs_create_fetch_backend_js(backend); }));
   }

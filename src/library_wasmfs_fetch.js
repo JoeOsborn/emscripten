@@ -34,14 +34,17 @@ addToLibrary({
         } catch (e) {
         }
       }
-      var chunkSize = __wasmfs_fetch_get_chunk_size();
+      var chunkSize = __wasmfs_fetch_get_chunk_size(file);
       offset = offset || 0;
       len = len || chunkSize;
       var firstChunk = (offset / chunkSize) | 0;
       var lastChunk = ((offset+len) / chunkSize) | 0;
       if (!(file in wasmFS$JSMemoryRanges)) {
-        var fileInfo = await fetch(url,{method:"HEAD",headers:{"Range":"bytes=0-1"}});
-        if(fileInfo.ok && fileInfo.headers.has("Content-Length") && fileInfo.headers.get("Accept-Ranges") == "bytes" && (parseInt(fileInfo.headers.get("Content-Length")) > chunkSize*2)) {
+        var fileInfo = await fetch(url,{method:"HEAD", headers:{"Range": "bytes=0-"}});
+        if(fileInfo.ok &&
+           fileInfo.headers.has("Content-Length") &&
+           fileInfo.headers.get("Accept-Ranges") == "bytes" &&
+           (parseInt(fileInfo.headers.get("Content-Length")) > chunkSize*2)) {
           wasmFS$JSMemoryRanges[file] = {size:parseInt(fileInfo.headers.get("Content-Length")), chunks:[], chunkSize:chunkSize};
         } else {
           // may as well/forced to download the whole file
@@ -74,11 +77,11 @@ addToLibrary({
       // This is the first time we want the chunk's data.
       var start = firstChunk*chunkSize;
       var end = lastChunk*chunkSize;
-      var response = await fetch(url, {headers:{"Range": `bytes=${start}-${end}`}});
+      var response = await fetch(url, {headers:{"Range": `bytes=${start}-${end-1}`}});
       if (response.ok) {
         var bytes = new Uint8Array(await response['arrayBuffer']());
         for (i = firstChunk; i < lastChunk; i++) {
-          wasmFS$JSMemoryRanges[file].chunks[i] = bytes.slice(i*chunkSize,(i+1)*chunkSize);
+          wasmFS$JSMemoryRanges[file].chunks[i] = bytes.slice(i*chunkSize-start,(i+1)*chunkSize-start);
         }
       } else {
         throw response;
@@ -125,8 +128,8 @@ addToLibrary({
           if(!chunk) {
             throw [fileData.length, firstChunk, lastChunk, i];
           }
-          var end = Math.min(start+chunk.byteLength, offset+length);
           var chunkStart = i*chunkSize;
+          var end = Math.min(chunkStart+chunkSize, offset+length);
           HEAPU8.set(chunk.subarray(start-chunkStart, end-chunkStart), buffer+(start-offset));
           readLength = end - offset;
         }
