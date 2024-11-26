@@ -57,7 +57,10 @@ backend_t wasmfs_create_memory_backend(void);
 //
 // TODO: Add an async version of this function that will work on the main
 // thread.
-backend_t wasmfs_create_fetch_backend(const char* base_url __attribute__((nonnull)), uint32_t);
+backend_t wasmfs_create_fetch_backend(const char* base_url __attribute__((nonnull)), uint32_t, void *);
+
+void *wasmfs_fetch_create_manifest();
+void wasmfs_fetch_add_to_manifest(void *, const char *, const char *);
 
 backend_t wasmfs_create_node_backend(const char* root __attribute__((nonnull)));
 

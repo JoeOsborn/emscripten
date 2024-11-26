@@ -15,23 +15,32 @@ namespace wasmfs {
 
 const uint32_t DEFAULT_CHUNK_SIZE = 16*1024*1024;
 
+typedef std::map<std::string,std::string> FetchManifest;
+
 class FetchBackend : public wasmfs::ProxiedAsyncJSBackend {
   std::string baseUrl;
   uint32_t chunkSize;
+  FetchManifest *manifest;
  public:
+  // Takes ownership of manifest
   FetchBackend(const std::string& baseUrl,
                uint32_t chunkSize,
+               FetchManifest *manifest,
                std::function<void(backend_t)> setupOnThread)
-    : ProxiedAsyncJSBackend(setupOnThread), baseUrl(baseUrl), chunkSize(chunkSize)
-      // TODO manifest
+    : ProxiedAsyncJSBackend(setupOnThread), baseUrl(baseUrl), chunkSize(chunkSize), manifest(manifest)
   {}
+  ~FetchBackend() {
+    if(manifest != NULL) {
+      delete manifest;
+    }
+  }
   std::shared_ptr<DataFile> createFile(mode_t mode) override;
   std::shared_ptr<Directory> createDirectory(mode_t mode) override;
   const std::string getFileURL(const std::string& filePath);
   uint32_t getChunkSize();
 };
 
-  
+
 class FetchFile : public ProxiedAsyncJSImplFile {
   std::string filePath;
   std::string fileUrl;
@@ -93,7 +102,11 @@ std::shared_ptr<Directory> FetchBackend::createDirectory(mode_t mode) {
 }
 
 const std::string FetchBackend::getFileURL(const std::string& filePath) {
-  // TODO use manifest
+  if(manifest) {
+    if (auto search = manifest->find(filePath); search != manifest->end()) {
+      return baseUrl + "/" + search->second;
+    }
+  }
   if(filePath == "") {
     return baseUrl;
   }
@@ -104,7 +117,7 @@ uint32_t FetchBackend::getChunkSize() {
 }
 
 extern "C" {
-  backend_t wasmfs_create_fetch_backend(const char* base_url, uint32_t chunkSize /* TODO manifest */) {
+  backend_t wasmfs_create_fetch_backend(const char* base_url, uint32_t chunkSize, FetchManifest *manifest) {
   // ProxyWorker cannot safely be synchronously spawned from the main browser
   // thread. See comment in thread_utils.h for more details.
   assert(!emscripten_is_main_browser_thread() &&
@@ -112,7 +125,7 @@ extern "C" {
   return wasmFS.addBackend(std::make_unique<FetchBackend>(
     base_url ? base_url : "",
     chunkSize != 0 ? chunkSize : DEFAULT_CHUNK_SIZE,
-    /* TODO manifest */
+    manifest,
     [](backend_t backend) { _wasmfs_create_fetch_backend_js(backend); }));
   }
 
@@ -128,6 +141,17 @@ uint32_t EMSCRIPTEN_KEEPALIVE _wasmfs_fetch_get_chunk_size(void* ptr) {
   auto* file = reinterpret_cast<wasmfs::FetchFile*>(ptr);
   return file ? file->getChunkSize() : DEFAULT_CHUNK_SIZE;
 }
+
+void *EMSCRIPTEN_KEEPALIVE wasmfs_fetch_create_manifest() {
+  return new FetchManifest();
+}
+void EMSCRIPTEN_KEEPALIVE wasmfs_fetch_add_to_manifest(void *manifest_ptr, const char *path, const char *url) {
+  auto* manifest = reinterpret_cast<FetchManifest *>(manifest_ptr);
+  auto path_str = std::string(path);
+  auto url_str = std::string(url);
+  manifest->insert(std::pair(path_str, url_str));
+}
+
 }
 
 } // namespace wasmfs

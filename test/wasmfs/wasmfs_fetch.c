@@ -42,8 +42,20 @@ void check_file(int fd, const char* content) {
 void test_url_relative() {
   printf("Running %s...\n", __FUNCTION__);
 
-  backend_t backend2 = wasmfs_create_fetch_backend("test.txt",0);
+  backend_t backend2 = wasmfs_create_fetch_backend("test.txt",0,NULL);
   int fd = wasmfs_create_file("/file_rel", 0777, backend2);
+  check_file(fd, "fetch 2");
+  assert(close(fd) == 0);
+}
+
+void test_manifest() {
+  printf("Running %s...\n", __FUNCTION__);
+  void *manifest = wasmfs_fetch_create_manifest();
+  wasmfs_fetch_add_to_manifest(manifest, "/file", "test.txt");
+  backend_t backend = wasmfs_create_fetch_backend("",0,manifest);
+  // Create a directory with the fetchfs backend
+  wasmfs_create_directory("/dat", 0777, backend);
+  int fd = wasmfs_create_file("/dat/file", 0777, backend);
   check_file(fd, "fetch 2");
   assert(close(fd) == 0);
 }
@@ -56,7 +68,7 @@ void test_url_absolute() {
   char url[200];
   snprintf(url, sizeof(url), "%s%s", url_orig, file_name);
 
-  backend_t backend = wasmfs_create_fetch_backend(url,0);
+  backend_t backend = wasmfs_create_fetch_backend(url,0,NULL);
   int fd = wasmfs_create_file(file_name, 0777, backend);
   check_file(fd, "fetch 2");
   assert(close(fd) == 0);
@@ -69,7 +81,7 @@ void test_directory_abs() {
   char url[200];
   snprintf(url, sizeof(url), "%s%s", url_orig, dir_path);
 
-  backend_t backend = wasmfs_create_fetch_backend(url,0);
+  backend_t backend = wasmfs_create_fetch_backend(url,0,NULL);
   int res = wasmfs_create_directory(dir_path, 0777, backend);
   if (errno)
     perror("wasmfs_create_directory");
@@ -100,7 +112,7 @@ void test_directory_abs() {
 
 void test_default() {
   printf("Running %s...\n", __FUNCTION__);
-  backend_t backend = wasmfs_create_fetch_backend("data.dat",0);
+  backend_t backend = wasmfs_create_fetch_backend("data.dat",0,NULL);
 
   // Create a file in that backend.
   int fd = wasmfs_create_file("/testfile", 0777, backend);
@@ -136,7 +148,7 @@ void test_small_reads() {
   char expected[] = "hello";
   size_t size = 5;
 
-  backend_t backend = wasmfs_create_fetch_backend("small.dat",0);
+  backend_t backend = wasmfs_create_fetch_backend("small.dat",0,NULL);
   int fd = wasmfs_create_file("/testfile3", 0777, backend);
   char buf[size + 1];
   for (size_t i = 0; i < size; i++) {
@@ -157,7 +169,7 @@ void test_small_chunks() {
   char expected[] = "hello";
   size_t size = 5;
 
-  backend_t backend = wasmfs_create_fetch_backend("small.dat",2);
+  backend_t backend = wasmfs_create_fetch_backend("small.dat",2,NULL);
   int fd;
   char buf[size + 1];
   fd = wasmfs_create_file("/testfile4", 0777, backend);
@@ -203,7 +215,7 @@ void test_small_chunks_divisor_of_size() {
   char expected[] = "hello, fetch";
   size_t size = 12;
 
-  backend_t backend = wasmfs_create_fetch_backend("data.dat",4);
+  backend_t backend = wasmfs_create_fetch_backend("data.dat",4,NULL);
   int fd;
   char buf[size + 1];
   fd = wasmfs_create_file("/testfile7", 0777, backend);
@@ -283,6 +295,7 @@ void test_nonexistent() {
 int main() {
   getUrlOrigin(url_orig, sizeof(url_orig));
   test_default();
+  test_manifest();
   test_url_relative();
   test_url_absolute();
   test_directory_abs();
