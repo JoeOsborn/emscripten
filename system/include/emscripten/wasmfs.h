@@ -57,10 +57,18 @@ backend_t wasmfs_create_memory_backend(void);
 //
 // TODO: Add an async version of this function that will work on the main
 // thread.
-backend_t wasmfs_create_fetch_backend(const char* base_url __attribute__((nonnull)), uint32_t, void *);
+backend_t wasmfs_create_fetch_backend(const char* base_url __attribute__((nonnull)),
+                                      uint32_t chunkSize,
+                                      void *manifest);
 
+// Create a FetchFS manifest record that can be populated and passed into
+// wasmfs_fetch_create_backend.
 void *wasmfs_fetch_create_manifest();
-void wasmfs_fetch_add_to_manifest(void *, const char *, const char *);
+
+// Add a path to URL mapping to the given manifest.
+void wasmfs_fetch_add_to_manifest(void *manifest __attribute__((nonnull)),
+                                  const char *path __attribute__((nonnull)),
+                                  const char *url __attribute__((nonnull)));
 
 backend_t wasmfs_create_node_backend(const char* root __attribute__((nonnull)));
 

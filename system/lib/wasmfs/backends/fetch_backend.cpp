@@ -112,6 +112,7 @@ const std::string FetchBackend::getFileURL(const std::string& filePath) {
   }
   return baseUrl + "/" + filePath;
 }
+
 uint32_t FetchBackend::getChunkSize() {
   return chunkSize;
 }
@@ -124,20 +125,22 @@ extern "C" {
          "Cannot safely create fetch backend on main browser thread");
   return wasmFS.addBackend(std::make_unique<FetchBackend>(
     base_url ? base_url : "",
-    chunkSize != 0 ? chunkSize : DEFAULT_CHUNK_SIZE,
+    chunkSize ? chunkSize : DEFAULT_CHUNK_SIZE,
     manifest,
     [](backend_t backend) { _wasmfs_create_fetch_backend_js(backend); }));
   }
 
-const char* EMSCRIPTEN_KEEPALIVE _wasmfs_fetch_get_file_path(void* ptr) {
+const char* _wasmfs_fetch_get_file_path(void* ptr) {
   auto* file = reinterpret_cast<wasmfs::FetchFile*>(ptr);
   return file ? file->getPath().data() : nullptr;
 }
-const char* EMSCRIPTEN_KEEPALIVE _wasmfs_fetch_get_file_url(void* ptr) {
+
+const char* _wasmfs_fetch_get_file_url(void* ptr) {
   auto* file = reinterpret_cast<wasmfs::FetchFile*>(ptr);
   return file ? file->getURL().data() : nullptr;
 }
-uint32_t EMSCRIPTEN_KEEPALIVE _wasmfs_fetch_get_chunk_size(void* ptr) {
+
+uint32_t _wasmfs_fetch_get_chunk_size(void* ptr) {
   auto* file = reinterpret_cast<wasmfs::FetchFile*>(ptr);
   return file ? file->getChunkSize() : DEFAULT_CHUNK_SIZE;
 }
@@ -145,6 +148,7 @@ uint32_t EMSCRIPTEN_KEEPALIVE _wasmfs_fetch_get_chunk_size(void* ptr) {
 void *EMSCRIPTEN_KEEPALIVE wasmfs_fetch_create_manifest() {
   return new FetchManifest();
 }
+
 void EMSCRIPTEN_KEEPALIVE wasmfs_fetch_add_to_manifest(void *manifest_ptr, const char *path, const char *url) {
   auto* manifest = reinterpret_cast<FetchManifest *>(manifest_ptr);
   auto path_str = std::string(path);
